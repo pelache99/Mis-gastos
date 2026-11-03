@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173f35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Cuenta de casa">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>La cuenta de casa</title>
+<style>
+:root{--bg:#f4f6f2;--card:#fff;--ink:#1d2925;--muted:#66736d;--green:#173f35;--line:#e1e7e2;--red:#b43b35}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--green);color:#fff;padding:24px 18px 20px;border-radius:0 0 22px 22px}
+header h1{margin:0 0 5px;font-size:25px}header p{margin:0;color:#d7e6dd;font-size:14px}
+main{max-width:760px;margin:auto;padding:16px 14px 40px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;box-shadow:0 2px 8px #193d2d08}
+.metric small{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}.metric strong{font-size:22px;overflow-wrap:anywhere}.metric.wide{grid-column:1/-1}
+h2{font-size:18px;margin:0 0 14px}label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}
+input,select,button{font:inherit;border-radius:10px}input,select{width:100%;border:1px solid #cfd9d1;background:white;padding:12px;color:var(--ink)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+button{border:0;padding:12px 15px;background:var(--green);color:white;font-weight:650;cursor:pointer}.secondary{background:#e8eee9;color:var(--green)}.danger{background:#fff0ee;color:var(--red)}
+.tabs{display:flex;gap:8px;margin-bottom:12px}.tabs button{flex:1;padding:10px 5px}.tabs button.active{background:#dce9df;color:var(--green);outline:2px solid #b6cdbb}
+.item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}.item small{display:block;color:var(--muted);margin-top:3px}.amount{white-space:nowrap;font-weight:700}.expense{color:var(--red)}.income{color:#247448}
+.hidden{display:none}.muted{color:var(--muted);font-size:13px;line-height:1.45}.empty{color:var(--muted);padding:14px 0}.budgetline{margin:12px 0}.budgethead{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:6px}.bar{height:8px;background:#e8eee9;border-radius:8px;overflow:hidden}.bar span{display:block;height:100%;background:#4c8a63;width:0}.bar.over span{background:var(--red)}
+footer{color:var(--muted);font-size:12px;text-align:center;padding:8px 20px 22px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.metric.wide{grid-column:auto}}
+</style>
+</head>
+<body>
+<header><h1>La cuenta de casa</h1><p>Ingresos, gastos y lo que queda al final del mes.</p></header>
+<main>
+  <div class="row" style="align-items:end;margin-bottom:12px">
+    <div><label for="month">Mes que quieres consultar</label><input id="month" type="month"></div>
+    <div><label for="currency">Moneda</label><select id="currency"><option value="EUR">Euro (€)</option><option value="USD">Dólar ($)</option><option value="GBP">Libra (£)</option></select></div>
+  </div>
+  <div class="grid">
+    <div class="card metric"><small>Dinero que entra</small><strong id="totalIn">0,00 €</strong></div>
+    <div class="card metric"><small>Dinero que sale</small><strong id="totalOut">0,00 €</strong></div>
+    <div class="card metric wide"><small>Lo que queda</small><strong id="balance">0,00 €</strong></div>
+  </div>
+  <section class="card">
+    <h2>Sueldos habituales</h2>
+    <p class="muted">Guarda aquí los sueldos normales de los dos. Puedes modificarlos cuando haya una subida o un cambio. El total se calcula automáticamente.</p>
+    <div class="row">
+      <div><label for="salaryMe">Mi sueldo mensual (€)</label><input id="salaryMe" type="number" min="0" step="0.01" placeholder="Ej.: 1700"></div>
+      <div><label for="salaryPartner">Sueldo de mi mujer (€)</label><input id="salaryPartner" type="number" min="0" step="0.01" placeholder="Ej.: 1300"></div>
+    </div>
+    <div style="padding:12px 0 4px"><span class="muted">Total de los dos sueldos</span><div id="salaryTotal" style="font-size:24px;font-weight:750;color:var(--green)">0,00 €</div></div>
+    <div class="actions"><button type="button" onclick="saveSalaries()">Guardar sueldos</button><button type="button" class="secondary" onclick="addSalariesToMonth()">Añadir los dos sueldos a este mes</button></div>
+    <p class="muted">“Guardar sueldos” solo actualiza las cantidades habituales. Pulsa “Añadir los dos sueldos a este mes” para registrarlos como ingresos del mes seleccionado; evita pulsarlo dos veces en el mismo mes.</p>
+  </section>
+  <section class="card">
+    <h2>Añadir movimiento</h2>
+    <div class="tabs"><button type="button" id="expenseTab" class="active" onclick="setType('gasto')">➖ Gasto</button><button type="button" id="incomeTab" onclick="setType('ingreso')">➕ Ingreso</button></div>
+    <form id="entryForm">
+      <div class="row">
+        <div><label for="date">Fecha</label><input id="date" type="date" required></div>
+        <div><label for="amount">Cantidad (€)</label><input id="amount" type="number" min="0.01" step="0.01" placeholder="0,00" required></div>
+      </div>
+      <label for="category">Categoría</label><select id="category"></select>
+      <label for="description">Concepto (opcional)</label><input id="description" maxlength="90" placeholder="Ej.: factura de octubre">
+      <label for="person">¿De quién o para quién?</label><select id="person"><option>Compartido</option><option>Yo</option><option>Mi mujer</option><option>Otro</option></select>
+      <div class="actions"><button type="submit">Guardar movimiento</button><button class="secondary" type="button" onclick="resetForm()">Limpiar</button></div>
+    </form>
+    <p class="muted">Los movimientos se guardan en este dispositivo. No se conectan a tu banco.</p>
+  </section>
+  <section class="card">
+    <h2>Presupuesto del mes</h2>
+    <p class="muted">Pon un límite mensual para cada gasto. La barra te indica cuánto lleváis usado.</p>
+    <div id="budgets"></div>
+    <form id="budgetForm">
+      <label for="budgetCategory">Categoría de gasto</label><select id="budgetCategory"></select>
+      <label for="budgetAmount">Límite mensual (€)</label><input id="budgetAmount" type="number" min="0" step="0.01" placeholder="Ej.: 150" required>
+      <div class="actions"><button type="submit">Guardar presupuesto</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Movimientos del mes</h2>
+    <label for="filter">Mostrar</label><select id="filter"><option value="todos">Todos</option><option value="gasto">Solo gastos</option><option value="ingreso">Solo ingresos</option></select>
+    <div id="entries"></div>
+  </section>
+  <section class="card">
+    <h2>Resumen por categoría</h2><div id="summary"></div>
+  </section>
+  <section class="card">
+    <h2>Guardar una copia</h2>
+    <p class="muted">Descarga un archivo con tus datos para conservarlos o pasarlos a otro dispositivo. También puedes importar una copia anterior.</p>
+    <div class="actions"><button type="button" onclick="exportData()">Exportar datos</button><button type="button" class="secondary" onclick="document.getElementById('importFile').click()">Importar copia</button><input class="hidden" type="file" id="importFile" accept="application/json"></div>
+    <div class="actions"><button type="button" class="danger" onclick="clearAll()">Borrar todos los datos</button></div>
+  </section>
+</main>
+<footer>Hecha para llevar las cuentas de casa. Revisa y exporta una copia de vez en cuando.</footer>
+<script>
+const cats = {
+ gasto:["Vivienda / alquiler","Luz","Agua","Gas","Internet y teléfono","Comida y supermercado","Coche","Combustible","Seguro del coche","Seguros","Hipoteca","Comunidad","Impuestos","Salud y farmacia","Colegio y niños","Ropa","Ocio y restaurantes","Suscripciones","Mascotas","Otros gastos"],
+ ingreso:["Sueldo mío","Sueldo de mi mujer","Otros ingresos"]
+};
+let type='gasto';
+let data=[];
+let budgets={};
+let salaries={me:0,partner:0};
+try{salaries=JSON.parse(localStorage.getItem('cuentaCasa_salaries')||'{"me":0,"partner":0}')}catch(e){salaries={me:0,partner:0}}
+const $=id=>document.getElementById(id);
+const today=new Date();
+$('month').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+$('date').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+try{data=JSON.parse(localStorage.getItem('cuentaCasa_entries')||'[]');budgets=JSON.parse(localStorage.getItem('cuentaCasa_budgets')||'{}')}catch(e){data=[];budgets={}}
+function money(n){return new Intl.NumberFormat('es-ES',{style:'currency',currency:$('currency').value}).format(n||0)}
+function persist(){localStorage.setItem('cuentaCasa_entries',JSON.stringify(data));localStorage.setItem('cuentaCasa_budgets',JSON.stringify(budgets))}
+function updateSalaryTotal(){
+  if(!$('salaryMe')) return;
+  const a=Math.max(0,Number($('salaryMe').value)||0), b=Math.max(0,Number($('salaryPartner').value)||0);
+  $('salaryTotal').textContent=money(a+b);
+}
+function saveSalaries(){
+  salaries={me:Math.max(0,Number($('salaryMe').value)||0),partner:Math.max(0,Number($('salaryPartner').value)||0)};
+  localStorage.setItem('cuentaCasa_salaries',JSON.stringify(salaries));
+  updateSalaryTotal();
+  alert('Sueldos habituales guardados. Puedes modificarlos cuando cambien.');
+}
+function addSalariesToMonth(){
+  const month=$('month').value;
+  if(!month){alert('Selecciona primero el mes.');return;}
+  const me=Math.max(0,Number($('salaryMe').value)||0), partner=Math.max(0,Number($('salaryPartner').value)||0);
+  if(me===0&&partner===0){alert('Introduce al menos uno de los sueldos.');return;}
+  const date=month+'-01';
+  const alreadyMe=data.some(x=>x.type==='ingreso'&&x.category==='Sueldo mío'&&x.date.slice(0,7)===month);
+  const alreadyPartner=data.some(x=>x.type==='ingreso'&&x.category==='Sueldo de mi mujer'&&x.date.slice(0,7)===month);
+  if((me>0&&alreadyMe)||(partner>0&&alreadyPartner)){
+    if(!confirm('Ya hay un sueldo registrado en este mes. ¿Quieres añadir otro movimiento igualmente?'))return;
+  }
+  if(me>0)data.push({id:Date.now()+Math.random(),type:'ingreso',date,amount:me,category:'Sueldo mío',description:'Sueldo mensual',person:'Yo'});
+  if(partner>0)data.push({id:Date.now()+Math.random(),type:'ingreso',date,amount:partner,category:'Sueldo de mi mujer',description:'Sueldo mensual',person:'Mi mujer'});
+  salaries={me,partner};localStorage.setItem('cuentaCasa_salaries',JSON.stringify(salaries));persist();render();
+  alert('Sueldos añadidos al mes seleccionado.');
+}
+function fillCategories(){ $('category').innerHTML=cats[type].map(c=>`<option>${c}</option>`).join('');$('budgetCategory').innerHTML=cats.gasto.map(c=>`<option>${c}</option>`).join('')}
+function setType(t){type=t;$('expenseTab').classList.toggle('active',t==='gasto');$('incomeTab').classList.toggle('active',t==='ingreso');fillCategories()}
+function resetForm(){$('entryForm').reset();$('date').value=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;fillCategories()}
+$('entryForm').addEventListener('submit',e=>{e.preventDefault();const amount=Number($('amount').value);if(!(amount>0))return;data.push({id:Date.now()+Math.random(),type,date:$('date').value,amount,category:$('category').value,description:$('description').value.trim(),person:$('person').value});persist();$('month').value=$('date').value.slice(0,7);render();resetForm()});
+$('budgetForm').addEventListener('submit',e=>{e.preventDefault();const amount=Number($('budgetAmount').value);if(amount<0)return;budgets[$('budgetCategory').value]=amount;persist();render();$('budgetAmount').value=''});
+$('month').addEventListener('change',render);$('currency').addEventListener('change',render);$('filter').addEventListener('change',render);
+function monthData(){return data.filter(x=>x.date&&x.date.slice(0,7)===$('month').value)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function render(){
+const arr=monthData(),ins=arr.filter(x=>x.type==='ingreso').reduce((s,x)=>s+x.amount,0),outs=arr.filter(x=>x.type==='gasto').reduce((s,x)=>s+x.amount,0);
+$('totalIn').textContent=money(ins);$('totalOut').textContent=money(outs);$('balance').textContent=money(ins-outs);$('balance').style.color=ins-outs<0?'var(--red)':'var(--green)';
+const spent={};arr.filter(x=>x.type==='gasto').forEach(x=>spent[x.category]=(spent[x.category]||0)+x.amount);
+const budgetCats=Object.keys(budgets).filter(c=>Number(budgets[c])>=0);
+$('budgets').innerHTML=budgetCats.length?budgetCats.map(c=>{const limit=Number(budgets[c]),used=spent[c]||0,pct=limit>0?Math.min(100,used/limit*100):(used>0?100:0);return `<div class="budgetline"><div class="budgethead"><span>${esc(c)}</span><span>${money(used)} / ${money(limit)}</span></div><div class="bar ${used>limit?'over':''}"><span style="width:${pct}%"></span></div><div class="muted">${used>limit?'Te has pasado por '+money(used-limit):'Quedan '+money(limit-used)}</div></div>`}).join(''):'<p class="empty">Todavía no has creado presupuestos.</p>';
+let list=arr.filter(x=>$('filter').value==='todos'||x.type===$('filter').value).sort((a,b)=>b.date.localeCompare(a.date));
+$('entries').innerHTML=list.length?list.map(x=>`<div class="item"><div><b>${esc(x.category)}</b><small>${esc(x.date)} · ${esc(x.person)}${x.description?' · '+esc(x.description):''}</small></div><div style="display:flex;align-items:center;gap:8px"><span class="amount ${x.type==='gasto'?'expense':'income'}">${x.type==='gasto'?'−':'+'}${money(x.amount)}</span><button class="danger" style="padding:7px 9px" onclick="removeEntry('${x.id}')" aria-label="Eliminar movimiento">×</button></div></div>`).join(''):'<p class="empty">No hay movimientos en este mes.</p>';
+const keys=[...new Set([...Object.keys(spent),...arr.filter(x=>x.type==='ingreso').map(x=>x.category)])];
+$('summary').innerHTML=keys.length?keys.map(c=>{const g=spent[c]||0;const i=arr.filter(x=>x.type==='ingreso'&&x.category===c).reduce((s,x)=>s+x.amount,0);return `<div class="item"><span>${esc(c)}</span><span class="amount">${g?'<span class="expense">−'+money(g)+'</span> ':''}${i?'<span class="income">+'+money(i)+'</span>':''}</span></div>`}).join(''):'<p class="empty">Añade ingresos y gastos para ver el resumen.</p>';
+}
+function removeEntry(id){if(confirm('¿Quieres eliminar este movimiento?')){data=data.filter(x=>String(x.id)!==String(id));persist();render()}}
+function exportData(){const blob=new Blob([JSON.stringify({data,budgets},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='copia-cuenta-de-casa.json';a.click();URL.revokeObjectURL(url)}
+$('importFile').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const obj=JSON.parse(await f.text());if(!Array.isArray(obj.data)||typeof obj.budgets!=='object')throw Error();if(confirm('Importar sustituirá los datos actuales. ¿Continuar?')){data=obj.data;budgets=obj.budgets;persist();render();alert('Copia importada.')}}catch(err){alert('No se ha podido leer la copia.')}e.target.value=''});
+function clearAll(){if(confirm('¿Borrar todos los movimientos y presupuestos de este dispositivo? Esta acción no se puede deshacer.')){data=[];budgets={};persist();render()}}
+fillCategories();
+if($('salaryMe')){$('salaryMe').value=salaries.me||'';$('salaryPartner').value=salaries.partner||'';$('salaryMe').addEventListener('input',updateSalaryTotal);$('salaryPartner').addEventListener('input',updateSalaryTotal);updateSalaryTotal();}
+render();
+</script>
+<script>if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {})); }</script>
+</body>
+</html>
